@@ -1,25 +1,92 @@
-import { Briefcase, CheckCircle, Clock, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import api from "../utils/api";
+
+import {
+  Briefcase,
+  Clock,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Trophy,
+} from "lucide-react";
 
 const Dashboard = () => {
-  const stats = [
+  const [stats, setStats] = useState({
+    total: 0,
+    Applied: 0,
+    OA: 0,
+    Interview: 0,
+    Offer: 0,
+    Rejected: 0,
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+
+      const res = await api.get("/applications");
+
+      const applications = res.data;
+
+      const counts = {
+        total: applications.length,
+        Applied: 0,
+        OA: 0,
+        Interview: 0,
+        Offer: 0,
+        Rejected: 0,
+      };
+
+      applications.forEach((app) => {
+        if (counts[app.status] !== undefined) {
+          counts[app.status]++;
+        }
+      });
+
+      setStats(counts);
+    } catch (error) {
+      toast.error("Failed to load dashboard stats");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const cards = [
     {
       title: "Total Applications",
-      value: 12,
+      value: stats.total,
       icon: <Briefcase className="text-indigo-600" size={22} />,
     },
     {
       title: "Applied",
-      value: 6,
-      icon: <Clock className="text-blue-600" size={22} />,
+      value: stats.Applied,
+      icon: <FileText className="text-blue-600" size={22} />,
+    },
+    {
+      title: "OA",
+      value: stats.OA,
+      icon: <Clock className="text-purple-600" size={22} />,
     },
     {
       title: "Interviews",
-      value: 3,
-      icon: <CheckCircle className="text-green-600" size={22} />,
+      value: stats.Interview,
+      icon: <CheckCircle className="text-yellow-600" size={22} />,
+    },
+    {
+      title: "Offers",
+      value: stats.Offer,
+      icon: <Trophy className="text-green-600" size={22} />,
     },
     {
       title: "Rejected",
-      value: 3,
+      value: stats.Rejected,
       icon: <XCircle className="text-red-600" size={22} />,
     },
   ];
@@ -31,23 +98,27 @@ const Dashboard = () => {
         Track your progress and application statistics.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-6">
-        {stats.map((item, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-2xl shadow-md border border-gray-100 p-5 hover:shadow-lg transition"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500">{item.title}</p>
-              {item.icon}
-            </div>
+      {loading ? (
+        <p className="mt-8 text-gray-500 text-center">Loading stats...</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
+          {cards.map((item, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-2xl shadow-md border border-gray-100 p-5 hover:shadow-lg transition"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-500">{item.title}</p>
+                {item.icon}
+              </div>
 
-            <h2 className="text-3xl font-bold text-gray-800 mt-3">
-              {item.value}
-            </h2>
-          </div>
-        ))}
-      </div>
+              <h2 className="text-3xl font-bold text-gray-800 mt-3">
+                {item.value}
+              </h2>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mt-8 bg-white rounded-2xl shadow-md border border-gray-100 p-6">
         <h2 className="text-lg font-semibold text-gray-800">
