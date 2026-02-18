@@ -41,15 +41,40 @@ export const createApplication = async (req, res) => {
 // ==========================
 export const getApplications = async (req, res) => {
   try {
-    const applications = await Application.find({ userId: req.user._id }).sort({
-      createdAt: -1,
-    });
+    const { search, status, sort } = req.query;
+
+    // Base filter: only logged in user's applications
+    let query = {
+      userId: req.user._id,
+    };
+
+    // Status filter
+    if (status) {
+      query.status = status;
+    }
+
+    // Search filter (companyName OR role)
+    if (search) {
+      query.$or = [
+        { companyName: { $regex: search, $options: "i" } },
+        { role: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Sorting
+    let sortOption = { createdAt: -1 }; // default latest
+    if (sort === "oldest") {
+      sortOption = { createdAt: 1 };
+    }
+
+    const applications = await Application.find(query).sort(sortOption);
 
     return res.status(200).json(applications);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 // ==========================
 // GET /api/applications/:id
@@ -153,3 +178,46 @@ export const deleteApplication = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
+// ==========================
+// GET /api/applications/stats
+// Dashboard statistics
+// ==========================
+export const getApplicationStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const total = await Application.countDocuments({ userId });
+
+    const statusCountsArray = await Application.aggregate([
+      { $match: { userId } },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Convert array into object
+    const statusCounts = {
+      Applied: 0,
+      OA: 0,
+      Interview: 0,
+      Offer: 0,
+      Rejected: 0,
+    };
+
+    statusCountsArray.forEach((item) => {
+      statusCounts[item._id] = item.count;
+    });
+
+    return res.status(200).json({
+      total,
+      statusCounts,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+

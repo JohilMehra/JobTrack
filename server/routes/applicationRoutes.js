@@ -7,6 +7,7 @@ import {
   getApplicationById,
   updateApplication,
   deleteApplication,
+  getApplicationStats,
 } from "../controllers/applicationController.js";
 
 const router = express.Router();
@@ -17,6 +18,7 @@ router.use(authMiddleware);
 // CRUD Routes
 router.post("/", createApplication);
 router.get("/", getApplications);
+router.get("/stats", getApplicationStats);
 router.get("/:id", getApplicationById);
 router.put("/:id", updateApplication);
 router.delete("/:id", deleteApplication);
