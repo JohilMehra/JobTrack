@@ -221,3 +221,26 @@ export const getApplicationStats = async (req, res) => {
   }
 };
 
+
+//get Upcoming Follow Ups controller 
+export const getUpcomingFollowUps = async (req, res) => {
+  try {
+    const now = new Date();
+    const next24Hours = new Date(
+      now.getTime() + 24 * 60 * 60 * 1000
+    );
+
+    const applications = await Application.find({
+      userId: req.user.id,
+      followUpDate: {
+        $gte: now,
+        $lte: next24Hours,
+      },
+    }).sort({ followUpDate: 1 });
+
+    res.json(applications);
+  } catch (error) {
+    console.error("Upcoming follow-ups error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

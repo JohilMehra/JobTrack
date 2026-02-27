@@ -1,5 +1,6 @@
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
+import { getUpcomingFollowUps } from "../controllers/applicationController.js";
 
 import {
   createApplication,
@@ -19,8 +20,10 @@ router.use(authMiddleware);
 router.post("/", createApplication);
 router.get("/", getApplications);
 router.get("/stats", getApplicationStats);
+router.get("/upcoming-followups", getUpcomingFollowUps); // ⭐ move here
 router.get("/:id", getApplicationById);
 router.put("/:id", updateApplication);
 router.delete("/:id", deleteApplication);
+
 
 export default router;

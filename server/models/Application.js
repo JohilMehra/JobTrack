@@ -42,6 +42,9 @@ const applicationSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    followUpDate: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

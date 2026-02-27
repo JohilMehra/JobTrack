@@ -9,21 +9,25 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
     appliedDate: "",
     location: "",
     notes: "",
+    followUpDate: "",
   });
 
   useEffect(() => {
     if (initialData) {
-      setFormData({
-        companyName: initialData.companyName || "",
-        role: initialData.role || "",
-        status: initialData.status || "Applied",
-        appliedDate: initialData.appliedDate
-          ? initialData.appliedDate.split("T")[0]
-          : "",
-        location: initialData.location || "",
-        notes: initialData.notes || "",
-      });
-    } else {
+    setFormData({
+      companyName: initialData.companyName || "",
+      role: initialData.role || "",
+      status: initialData.status || "Applied",
+      appliedDate: initialData.appliedDate
+        ? initialData.appliedDate.split("T")[0]
+        : "",
+      location: initialData.location || "",
+      notes: initialData.notes || "",
+      followUpDate: initialData.followUpDate
+        ? initialData.followUpDate.split("T")[0]
+        : "",
+    });
+  } else {
       setFormData({
         companyName: "",
         role: "",
@@ -31,6 +35,7 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
         appliedDate: "",
         location: "",
         notes: "",
+        followUpDate: "",
       });
     }
   }, [initialData]);
@@ -129,6 +134,20 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                 required
               />
             </div>
+          </div>
+
+          {/* Follow-up Date */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Follow-up Date (optional)
+            </label>
+            <input
+              type="date"
+              name="followUpDate"
+              value={formData.followUpDate || ""}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
           </div>
 
           <div>

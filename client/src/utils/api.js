@@ -17,3 +17,6 @@ api.interceptors.request.use((config) => {
 });
 
 export default api;
+
+export const getUpcomingFollowUps = () =>
+  api.get("/applications/upcoming-followups");

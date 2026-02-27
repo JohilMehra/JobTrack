@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import api from "../utils/api";
+import api, { getUpcomingFollowUps } from "../utils/api";
 
 import {
   Briefcase,
@@ -9,11 +9,20 @@ import {
   CheckCircle,
   Trophy,
   XCircle,
+  CalendarClock,
 } from "lucide-react";
 
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 const Dashboard = () => {
+  // ================= STATS STATE =================
   const [stats, setStats] = useState({
     total: 0,
     statusCounts: {
@@ -27,6 +36,11 @@ const Dashboard = () => {
 
   const [loading, setLoading] = useState(true);
 
+  // ================= FOLLOWUPS STATE =================
+  const [followUps, setFollowUps] = useState([]);
+  const [loadingFollowUps, setLoadingFollowUps] = useState(true);
+
+  // ================= FETCH STATS =================
   const fetchStats = async () => {
     try {
       setLoading(true);
@@ -39,10 +53,33 @@ const Dashboard = () => {
     }
   };
 
+  // ================= FETCH FOLLOWUPS =================
+  const fetchFollowUps = async () => {
+    try {
+      const res = await getUpcomingFollowUps();
+      setFollowUps(res.data);
+    } catch (error) {
+      console.error("Follow-ups fetch error:", error);
+    } finally {
+      setLoadingFollowUps(false);
+    }
+  };
+
+  // ================= EFFECT =================
   useEffect(() => {
     fetchStats();
+    fetchFollowUps();
   }, []);
 
+  // ================= URGENCY CHECK =================
+  const isUrgent = (date) => {
+    const now = new Date();
+    const followDate = new Date(date);
+    const diffHours = (followDate - now) / (1000 * 60 * 60);
+    return diffHours <= 24;
+  };
+
+  // ================= STATUS CARDS =================
   const statusCards = [
     {
       title: "Total Applications",
@@ -76,6 +113,7 @@ const Dashboard = () => {
     },
   ];
 
+  // ================= CHART DATA =================
   const chartData = [
     { name: "Applied", value: stats.statusCounts.Applied },
     { name: "OA", value: stats.statusCounts.OA },
@@ -86,6 +124,7 @@ const Dashboard = () => {
 
   const COLORS = ["#3b82f6", "#8b5cf6", "#facc15", "#22c55e", "#ef4444"];
 
+  // ================= UI =================
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
@@ -97,7 +136,7 @@ const Dashboard = () => {
         <p className="mt-8 text-gray-500 text-center">Loading stats...</p>
       ) : (
         <>
-          {/* Stats Cards */}
+          {/* ================= Stats Cards ================= */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
             {statusCards.map((item, index) => (
               <div
@@ -116,7 +155,7 @@ const Dashboard = () => {
             ))}
           </div>
 
-          {/* Charts */}
+          {/* ================= Chart ================= */}
           <div className="mt-8 bg-white rounded-2xl shadow-md border border-gray-100 p-6">
             <h2 className="text-lg font-semibold text-gray-800">
               Status Distribution
@@ -128,7 +167,9 @@ const Dashboard = () => {
             <div className="mt-6 h-72">
               {stats.total === 0 ? (
                 <div className="h-full flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                  <p className="text-gray-400">No data available for chart</p>
+                  <p className="text-gray-400">
+                    No data available for chart
+                  </p>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
@@ -143,7 +184,7 @@ const Dashboard = () => {
                       label
                     >
                       {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index]} />
+                        <Cell key={index} fill={COLORS[index]} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -152,6 +193,55 @@ const Dashboard = () => {
                 </ResponsiveContainer>
               )}
             </div>
+          </div>
+
+          {/* ================= FOLLOW UPS WIDGET ================= */}
+          <div className="mt-8 bg-white rounded-2xl shadow-md border border-gray-100 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <CalendarClock className="text-indigo-600" size={22} />
+              <h2 className="text-lg font-semibold text-gray-800">
+                Upcoming Follow-Ups
+              </h2>
+            </div>
+
+            {loadingFollowUps ? (
+              <p className="text-sm text-gray-500">
+                Loading follow-ups...
+              </p>
+            ) : followUps.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No upcoming follow-ups 🎉
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {followUps.map((app) => (
+                  <div
+                    key={app._id}
+                    className={`p-4 rounded-xl border ${
+                      isUrgent(app.followUpDate)
+                        ? "border-red-300 bg-red-50"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <p className="font-medium text-gray-800">
+                      {app.companyName} — {app.role}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Follow-up:{" "}
+                      {new Date(
+                        app.followUpDate
+                      ).toLocaleDateString()}
+                    </p>
+
+                    {isUrgent(app.followUpDate) && (
+                      <span className="text-xs font-semibold text-red-600">
+                        ⚠ Urgent (within 24h)
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}

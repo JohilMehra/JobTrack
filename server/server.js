@@ -6,6 +6,7 @@ import connectDB from "./config/db.js";
 import testRoutes from "./routes/testRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
+import startFollowUpCron from "./cron/followUpCron.js";
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use(
 app.use(express.json());
 
 connectDB();
+startFollowUpCron();
 
 app.use("/api/test", testRoutes);
 app.use("/api/auth", authRoutes);
