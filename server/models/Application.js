@@ -45,6 +45,18 @@ const applicationSchema = new mongoose.Schema(
     followUpDate: {
       type: Date,
     },
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: ["Applied", "OA", "Interview", "Offer", "Rejected"]
+        },
+        date: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
   },
   { timestamps: true }
 );

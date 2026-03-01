@@ -1,6 +1,6 @@
 import Application from "../models/Application.js";
 import mongoose from "mongoose";
-
+import { parseJobEmail } from "../services/emailParser.js";
 // ==========================
 // POST /api/applications
 // Add new application
@@ -24,6 +24,12 @@ export const createApplication = async (req, res) => {
       appliedDate,
       location,
       notes,
+      statusHistory: [
+        {
+          status: status,
+          date: new Date()
+        }
+      ]
     });
 
     return res.status(201).json({
@@ -113,32 +119,59 @@ export const getApplicationById = async (req, res) => {
 export const updateApplication = async (req, res) => {
   try {
     const { id } = req.params;
+    const { status, ...otherUpdates } = req.body;
 
-    // Validate MongoDB ID
+    // ✅ Validate MongoDB ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid application ID" });
     }
 
+    // ✅ Find application first (IMPORTANT)
     const application = await Application.findById(id);
 
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
 
-    // Security check
+    // ✅ Security check
     if (application.userId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    const updatedApplication = await Application.findByIdAndUpdate(
-      id,
-      req.body,
-      { new: true }
-    );
+    // =================================================
+    // ⭐ SMART STATUS HISTORY LOGIC
+    // =================================================
+    if (status && status !== application.status) {
+      const lastHistory =
+        application.statusHistory[
+          application.statusHistory.length - 1
+        ];
+
+      // ✅ prevent duplicate consecutive status
+      if (!lastHistory || lastHistory.status !== status) {
+        application.statusHistory.push({
+          status: status,
+          date: new Date(),
+        });
+      }
+
+      // update current status
+      application.status = status;
+    }
+
+    // =================================================
+    // ⭐ Update other fields safely
+    // =================================================
+    Object.keys(otherUpdates).forEach((key) => {
+      application[key] = otherUpdates[key];
+    });
+
+    // ✅ Save document
+    await application.save();
 
     return res.status(200).json({
       message: "Application updated successfully",
-      application: updatedApplication,
+      application,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -242,5 +275,65 @@ export const getUpcomingFollowUps = async (req, res) => {
   } catch (error) {
     console.error("Upcoming follow-ups error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+// ======================================================
+// 🚀 Process Email → Auto Detect Job Mail
+// ======================================================
+
+export const processEmail = async (req, res) => {
+  try {
+    const { subject, body } = req.body;
+
+    // basic validation
+    if (!subject && !body) {
+      return res.status(400).json({
+        message: "Email subject or body is required",
+      });
+    }
+
+    // 🧠 run parser
+    const result = parseJobEmail({ subject, body });
+
+    // if not job related → return early
+    if (!result.isJobMail) {
+      return res.status(200).json({
+        message: "Not a job related email",
+        result,
+      });
+    }
+
+    // =================================================
+    // ✅ Create new application automatically
+    // (simple version for now)
+    // =================================================
+    const newApplication = await Application.create({
+      userId: req.user._id,
+      companyName: result.company || "Unknown Company",
+      role: "Auto-detected Role",
+      status: result.detectedStatus || "Applied",
+      appliedDate: new Date(),
+
+      statusHistory: [
+        {
+          status: result.detectedStatus || "Applied",
+          date: new Date(),
+        },
+      ],
+
+      source: "email-auto", // optional flag
+    });
+
+    return res.status(201).json({
+      message: "Application auto-created from email",
+      parserResult: result,
+      application: newApplication,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };

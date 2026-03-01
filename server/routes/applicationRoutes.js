@@ -9,21 +9,30 @@ import {
   updateApplication,
   deleteApplication,
   getApplicationStats,
+  processEmail, // ⭐ NEW
 } from "../controllers/applicationController.js";
 
 const router = express.Router();
 
-// Protect all routes
+// 🔐 Protect all routes
 router.use(authMiddleware);
 
-// CRUD Routes
+// ======================================================
+// 🚀 SPECIAL ROUTES (keep BEFORE /:id)
+// ======================================================
+
+router.post("/process-email", processEmail); // ⭐ NEW
+router.get("/stats", getApplicationStats);
+router.get("/upcoming-followups", getUpcomingFollowUps);
+
+// ======================================================
+// 📦 CRUD ROUTES
+// ======================================================
+
 router.post("/", createApplication);
 router.get("/", getApplications);
-router.get("/stats", getApplicationStats);
-router.get("/upcoming-followups", getUpcomingFollowUps); // ⭐ move here
 router.get("/:id", getApplicationById);
 router.put("/:id", updateApplication);
 router.delete("/:id", deleteApplication);
-
 
 export default router;
