@@ -153,17 +153,6 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id
 
 ---
 
-## 📸 Screenshots
-
-> Add your app screenshots here (recommended for recruiters)
-
-* Dashboard
-* Applications page
-* Email import demo
-* Mobile view
-
----
-
 ## 🚀 Future Improvements
 
 * Gmail OAuth sync
