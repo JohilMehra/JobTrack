@@ -19,3 +19,11 @@ Thumbs.db
 
 # vite cache
 .vite/
+
+# additional env safety
+.env.local
+.env.development
+.env.production
+
+# misc
+coverage/

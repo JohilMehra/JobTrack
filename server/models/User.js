@@ -11,20 +11,33 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true, // no two users can have same email
+      unique: true,
       lowercase: true,
       trim: true,
     },
 
     password: {
       type: String,
-      required: true,
-      minlength: 6,
+      // ❗ IMPORTANT: not required for Google users
+      required: false,
+    },
+
+    // ✅ NEW — Google OAuth support
+    googleId: {
+      type: String,
+    },
+
+    avatar: {
+      type: String,
+    },
+
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
   },
   { timestamps: true }
 );
 
-const User = mongoose.model("User", userSchema);
-
-export default User;
+export default mongoose.model("User", userSchema);

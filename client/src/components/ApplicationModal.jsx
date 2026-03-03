@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
+  // ✅ MUST be inside component
+  const [submitting, setSubmitting] = useState(false);
+
   const [formData, setFormData] = useState({
     companyName: "",
     role: "",
@@ -14,20 +17,20 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
 
   useEffect(() => {
     if (initialData) {
-    setFormData({
-      companyName: initialData.companyName || "",
-      role: initialData.role || "",
-      status: initialData.status || "Applied",
-      appliedDate: initialData.appliedDate
-        ? initialData.appliedDate.split("T")[0]
-        : "",
-      location: initialData.location || "",
-      notes: initialData.notes || "",
-      followUpDate: initialData.followUpDate
-        ? initialData.followUpDate.split("T")[0]
-        : "",
-    });
-  } else {
+      setFormData({
+        companyName: initialData.companyName || "",
+        role: initialData.role || "",
+        status: initialData.status || "Applied",
+        appliedDate: initialData.appliedDate
+          ? initialData.appliedDate.split("T")[0]
+          : "",
+        location: initialData.location || "",
+        notes: initialData.notes || "",
+        followUpDate: initialData.followUpDate
+          ? initialData.followUpDate.split("T")[0]
+          : "",
+      });
+    } else {
       setFormData({
         companyName: "",
         role: "",
@@ -47,16 +50,23 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    if (submitting) return;
+    try {
+      setSubmitting(true);
+      await onSubmit(formData);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 py-6 z-50 overflow-y-auto">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-lg p-6 relative max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-lg p-4 sm:p-6 relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
@@ -72,6 +82,7 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
         </p>
 
         <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
+          {/* Company */}
           <div>
             <label className="text-sm font-medium text-gray-700">
               Company Name *
@@ -87,6 +98,7 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             />
           </div>
 
+          {/* Role */}
           <div>
             <label className="text-sm font-medium text-gray-700">
               Role *
@@ -102,6 +114,7 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             />
           </div>
 
+          {/* Status + Applied Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700">
@@ -136,7 +149,7 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             </div>
           </div>
 
-          {/* Follow-up Date */}
+          {/* Follow-up */}
           <div>
             <label className="block text-sm font-medium mb-1">
               Follow-up Date (optional)
@@ -150,6 +163,7 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             />
           </div>
 
+          {/* Location */}
           <div>
             <label className="text-sm font-medium text-gray-700">
               Location
@@ -164,6 +178,7 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             />
           </div>
 
+          {/* Notes */}
           <div>
             <label className="text-sm font-medium text-gray-700">
               Notes
@@ -178,8 +193,18 @@ const ApplicationModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             />
           </div>
 
-          <button className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-500 transition shadow">
-            {initialData ? "Update Application" : "Add Application"}
+          {/* Submit */}
+          <button
+            disabled={submitting}
+            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-500 transition shadow disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {submitting
+              ? initialData
+                ? "Updating..."
+                : "Adding..."
+              : initialData
+              ? "Update Application"
+              : "Add Application"}
           </button>
         </form>
       </div>

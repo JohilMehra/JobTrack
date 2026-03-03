@@ -1,4 +1,5 @@
 import express from "express";
+import { googleLogin } from "../controllers/googleAuthController.js";
 import {
   registerUser,
   loginUser,
@@ -12,6 +13,8 @@ const router = express.Router();
 // Public Routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+
+router.post("/google", googleLogin);
 
 // Protected Route
 router.get("/me", authMiddleware, getMe);

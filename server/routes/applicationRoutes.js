@@ -9,7 +9,7 @@ import {
   updateApplication,
   deleteApplication,
   getApplicationStats,
-  processEmail, // ⭐ NEW
+  processEmail, 
 } from "../controllers/applicationController.js";
 
 const router = express.Router();

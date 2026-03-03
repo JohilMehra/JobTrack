@@ -1,110 +1,148 @@
-// ======================================================
-// 🎯 Keyword dictionaries
-// ======================================================
+// ===============================
+// JobTrack Email Parser (Rule-Based MVP)
+// ===============================
+
+// ---------- Keyword Dictionaries ----------
 
 const JOB_KEYWORDS = [
   "application",
+  "applied",
+  "opportunity",
+  "position",
+  "role",
+  "career",
+  "hiring",
+  "recruit",
   "interview",
   "assessment",
-  "online test",
-  "coding test",
   "offer",
-  "regret",
-  "unfortunately",
-  "shortlisted",
-  "next steps",
-  "opportunity",
 ];
 
 const STATUS_KEYWORDS = {
-  OA: [
-    "assessment",
-    "online test",
-    "coding test",
-    "hackerrank",
-    "codility",
-  ],
-  Interview: [
-    "interview",
-    "interview round",
-    "technical interview",
-    "hr interview",
-    "schedule interview",
-  ],
-  Offer: [
-    "offer letter",
-    "we are pleased",
-    "congratulations",
-    "job offer",
-  ],
-  Rejected: [
-    "unfortunately",
-    "regret",
-    "not moving forward",
-    "not selected",
-  ],
   Applied: [
     "application received",
-    "thank you for applying",
-    "we have received",
+    "thanks for applying",
+    "we received your application",
+    "application submitted",
+    "successfully applied",
+  ],
+
+  OA: [
+    "online assessment",
+    "coding assessment",
+    "take home test",
+    "complete the assessment",
+    "hackerrank",
+    "codility",
+    "test link",
+  ],
+
+  Interview: [
+    "interview",
+    "schedule a call",
+    "technical round",
+    "hr round",
+    "interview invitation",
+    "interview scheduled",
+  ],
+
+  Offer: [
+    "offer letter",
+    "we are pleased to offer",
+    "congratulations",
+    "job offer",
+    "pleased to inform",
+  ],
+
+  Rejected: [
+    "regret to inform",
+    "unfortunately",
+    "not moving forward",
+    "not selected",
+    "application was not successful",
   ],
 };
 
-// ======================================================
-// 🔍 Helpers
-// ======================================================
+// ---------- Helpers ----------
 
-const containsAny = (text, keywords) => {
-  const lower = text.toLowerCase();
-  return keywords.some((kw) => lower.includes(kw));
+const normalizeText = (text = "") => text.toLowerCase();
+
+// ---------- Detect Job Email ----------
+
+const detectJobMail = (subject, body) => {
+  const text = normalizeText(subject + " " + body);
+
+  return JOB_KEYWORDS.some((keyword) => text.includes(keyword));
 };
 
-const detectStatus = (text) => {
-  for (const [status, keywords] of Object.entries(STATUS_KEYWORDS)) {
-    if (containsAny(text, keywords)) {
+// ---------- Detect Status ----------
+
+const detectStatus = (subject, body) => {
+  const text = normalizeText(subject + " " + body);
+
+  for (const status of Object.keys(STATUS_KEYWORDS)) {
+    const keywords = STATUS_KEYWORDS[status];
+
+    if (keywords.some((kw) => text.includes(kw))) {
       return status;
     }
   }
+
   return null;
 };
 
-// very basic company guess (can improve later)
-const detectCompany = (subject) => {
-  // Example: "Amazon interview scheduled"
-  const words = subject.split(" ");
-  if (words.length > 0) {
-    return words[0];
+// ---------- Extract Company (MVP heuristic) ----------
+
+const extractCompanyFromEmail = (from = "") => {
+  try {
+    // Example: careers@google.com → google
+    const domainMatch = from.split("@")[1];
+    if (!domainMatch) return null;
+
+    const company = domainMatch.split(".")[0];
+    if (!company) return null;
+
+    // Capitalize first letter
+    return company.charAt(0).toUpperCase() + company.slice(1);
+  } catch {
+    return null;
   }
-  return null;
 };
 
-// ======================================================
-// 🚀 Main parser
-// ======================================================
+// ---------- Main Parser ----------
 
-export const parseJobEmail = ({ subject = "", body = "" }) => {
-  const combinedText = `${subject} ${body}`.toLowerCase();
+export const parseJobEmail = ({ subject, body, from }) => {
+  try {
+    // 1️⃣ detect if job related
+    const isJobMail = detectJobMail(subject, body);
 
-  // Step 1: is it job related?
-  const isJobMail = containsAny(combinedText, JOB_KEYWORDS);
+    if (!isJobMail) {
+      return {
+        isJobMail: false,
+        detectedStatus: null,
+        company: null,
+      };
+    }
 
-  if (!isJobMail) {
+    // 2️⃣ detect status
+    const detectedStatus = detectStatus(subject, body) || "Applied";
+
+    // 3️⃣ extract company
+    const company =
+      extractCompanyFromEmail(from) || "Unknown Company";
+
+    return {
+      isJobMail: true,
+      detectedStatus,
+      company,
+    };
+  } catch (error) {
+    console.error("Email parser error:", error);
+
     return {
       isJobMail: false,
       detectedStatus: null,
       company: null,
     };
   }
-
-  // Step 2: detect status
-  const detectedStatus = detectStatus(combinedText) || "Applied";
-
-  // Step 3: detect company (basic)
-  const company = detectCompany(subject);
-
-  return {
-    isJobMail: true,
-    detectedStatus,
-    company,
-  };
 };

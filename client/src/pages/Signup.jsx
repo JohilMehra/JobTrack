@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../utils/api";
 import { saveToken } from "../utils/auth";
+import GoogleLoginButton from "../components/GoogleLoginButton";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -106,11 +107,25 @@ const Signup = () => {
           </div>
 
           <button
+            type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-500 transition shadow disabled:opacity-60"
+            className={`
+              w-full py-3 rounded-xl font-semibold text-white
+              transition shadow
+              ${loading
+                ? "bg-indigo-400 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-500"}
+            `}
           >
-            {loading ? "Creating account..." : "Signup"}
+            {loading ? "Creating account..." : "Create Account"}
           </button>
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-4">
+            <div className="flex-1 h-px bg-gray-200"></div>
+            <span className="text-sm text-gray-400">OR</span>
+            <div className="flex-1 h-px bg-gray-200"></div>
+          </div>
+          <GoogleLoginButton />
         </form>
 
         <p className="text-sm text-gray-600 mt-5 text-center">

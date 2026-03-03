@@ -279,61 +279,93 @@ export const getUpcomingFollowUps = async (req, res) => {
 };
 
 
-// ======================================================
-// 🚀 Process Email → Auto Detect Job Mail
-// ======================================================
-
+// ===============================
+// Process Email → Auto Application
+// ===============================
 export const processEmail = async (req, res) => {
   try {
-    const { subject, body } = req.body;
+    const { subject, body, from } = req.body;
 
-    // basic validation
-    if (!subject && !body) {
+    // ---------- Basic validation ----------
+    if (!subject || !body || !from) {
       return res.status(400).json({
-        message: "Email subject or body is required",
+        message: "subject, body, and from are required",
       });
     }
 
-    // 🧠 run parser
-    const result = parseJobEmail({ subject, body });
+    // ---------- Run parser ----------
+    const result = parseJobEmail({ subject, body, from });
 
-    // if not job related → return early
+    // ---------- Ignore non-job emails ----------
     if (!result.isJobMail) {
-      return res.status(200).json({
-        message: "Not a job related email",
-        result,
+      return res.json({
+        action: "ignored",
+        reason: "Not a job-related email",
       });
     }
 
-    // =================================================
-    // ✅ Create new application automatically
-    // (simple version for now)
-    // =================================================
-    const newApplication = await Application.create({
-      userId: req.user._id,
-      companyName: result.company || "Unknown Company",
-      role: "Auto-detected Role",
-      status: result.detectedStatus || "Applied",
-      appliedDate: new Date(),
+    const { detectedStatus, company } = result;
 
+    // ---------- Duplicate check ----------
+    // For MVP we use role placeholder
+    const role = "Software Role";
+
+    let application = await Application.findOne({
+      userId: req.user.id,
+      companyName: company,
+      role,
+    });
+
+    // ===============================
+    // CASE 1 — Application exists → UPDATE
+    // ===============================
+    if (application) {
+      const lastStatus =
+        application.statusHistory[
+          application.statusHistory.length - 1
+        ]?.status;
+
+      // Prevent duplicate consecutive status
+      if (lastStatus !== detectedStatus) {
+        application.statusHistory.push({
+          status: detectedStatus,
+          date: new Date(),
+        });
+
+        application.status = detectedStatus;
+        await application.save();
+      }
+
+      return res.json({
+        action: "updated",
+        applicationId: application._id,
+      });
+    }
+
+    // ===============================
+    // CASE 2 — Create new application
+    // ===============================
+    application = await Application.create({
+      userId: req.user.id,
+      companyName: company,
+      role,
+      status: detectedStatus,
+      appliedDate: new Date(),
       statusHistory: [
         {
-          status: result.detectedStatus || "Applied",
+          status: detectedStatus,
           date: new Date(),
         },
       ],
-
-      source: "email-auto", // optional flag
+      source: "email-auto",
     });
 
-    return res.status(201).json({
-      message: "Application auto-created from email",
-      parserResult: result,
-      application: newApplication,
+    return res.json({
+      action: "created",
+      applicationId: application._id,
     });
   } catch (error) {
-    return res.status(500).json({
-      message: error.message,
-    });
+    console.error("processEmail error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
