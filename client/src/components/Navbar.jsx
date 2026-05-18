@@ -1,10 +1,9 @@
-import { UserCircle, Menu } from "lucide-react";
+﻿import { UserCircle, Menu } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 const Navbar = ({ setIsOpen }) => {
   const location = useLocation();
 
-  // ✅ FIX — add dynamic title function
   const getTitle = () => {
     if (location.pathname.includes("applications")) return "Applications";
     if (location.pathname.includes("dashboard")) return "Dashboard";
@@ -12,31 +11,27 @@ const Navbar = ({ setIsOpen }) => {
   };
 
   return (
-    <header className="h-16 w-full bg-white border-b border-gray-200 flex items-center justify-between px-6">
-      
-      {/* LEFT */}
-      <div className="flex items-center gap-3">
-        {/* Mobile hamburger */}
-        <button
-          onClick={() => setIsOpen(true)}
-          className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
-        >
-          <Menu size={22} />
-        </button>
+    <header className="sticky top-0 z-30 w-full border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsOpen(true)}
+            className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 md:hidden"
+            aria-label="Open sidebar"
+          >
+            <Menu size={20} />
+          </button>
 
-        <h2 className="text-lg font-semibold text-gray-800">
-          {getTitle()}
-        </h2>
-      </div>
-
-      {/* RIGHT */}
-      <div className="flex items-center gap-3">
-        <div className="text-right hidden sm:block">
-          <p className="text-sm font-medium text-gray-800">Johil</p>
-          <p className="text-xs text-gray-500">Free Plan</p>
+          <h2 className="text-base font-semibold tracking-tight text-slate-900 sm:text-lg">{getTitle()}</h2>
         </div>
 
-        <UserCircle size={38} className="text-gray-700" />
+        <div className="flex items-center gap-3">
+          <div className="hidden text-right sm:block">
+            <p className="text-sm font-medium text-slate-800">Johil</p>
+            <p className="text-xs text-slate-500">Premium Workspace</p>
+          </div>
+          <UserCircle size={34} className="text-slate-600" />
+        </div>
       </div>
     </header>
   );

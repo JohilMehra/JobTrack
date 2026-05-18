@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import api from "../utils/api";
-import { getUpcomingFollowUps, processEmailImport } from "../utils/api";
-
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import api, { getUpcomingFollowUps } from "../utils/api";
 import {
   Briefcase,
   FileText,
@@ -11,20 +8,16 @@ import {
   Trophy,
   XCircle,
   CalendarClock,
-  Mail,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+const CHART_COLORS = ["#5B6CFF", "#22C55E", "#F59E0B", "#10B981", "#EF4444"];
 
 const Dashboard = () => {
-  // ================= STATS STATE =================
   const [stats, setStats] = useState({
     total: 0,
     statusCounts: {
@@ -35,284 +28,229 @@ const Dashboard = () => {
       Rejected: 0,
     },
   });
-
   const [loading, setLoading] = useState(true);
-
-  // ⭐ IMPORTANT — chart readiness guard
-  const [chartReady, setChartReady] = useState(false);
-
-  // ================= FOLLOWUPS STATE =================
   const [followUps, setFollowUps] = useState([]);
   const [loadingFollowUps, setLoadingFollowUps] = useState(true);
+  const [chartWidth, setChartWidth] = useState(0);
+  const chartWrapperRef = useRef(null);
 
-  // ================= EMAIL IMPORT STATE =================
-  const [importingEmail, setImportingEmail] = useState(false);
-
-  // ================= FETCH STATS =================
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get("/applications/stats");
       setStats(res.data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load dashboard stats");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // ================= FETCH FOLLOWUPS =================
-  const fetchFollowUps = async () => {
+  const fetchFollowUps = useCallback(async () => {
     try {
       setLoadingFollowUps(true);
       const res = await getUpcomingFollowUps();
       setFollowUps(res.data);
-    } catch (error) {
-      console.error("Follow-ups fetch error:", error);
+    } catch {
+      toast.error("Failed to load upcoming follow-ups");
     } finally {
       setLoadingFollowUps(false);
     }
-  };
+  }, []);
 
-  // ================= EMAIL SIMULATION =================
-  const handleSimulateEmail = async () => {
-    try {
-      setImportingEmail(true);
-
-      const sampleEmail = {
-        subject: "Interview Invitation from Google",
-        body: "We would like to schedule an interview for the Software Engineer role.",
-        from: "careers@google.com",
-      };
-
-      const res = await processEmailImport(sampleEmail);
-
-      if (res.data.action === "ignored") {
-        toast("Email ignored (not job related)");
-      } else if (res.data.action === "created") {
-        toast.success("Application auto-created 🚀");
-      } else if (res.data.action === "updated") {
-        toast.success("Application status updated 🔄");
-      }
-      window.scrollTo({ top: 0, behavior: "smooth" });
-
-      fetchStats();
-      fetchFollowUps();
-    } catch (error) {
-      console.error(error);
-      toast.error("Email import failed");
-    } finally {
-      setImportingEmail(false);
-    }
-  };
-
-  // ================= EFFECT =================
   useEffect(() => {
     fetchStats();
     fetchFollowUps();
-  }, []);
+  }, [fetchStats, fetchFollowUps]);
 
-  // ⭐ CRITICAL FIX — delay chart mount one tick
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setChartReady(true);
-    }, 0);
-    return () => clearTimeout(timer);
+    if (!chartWrapperRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const nextWidth = entries[0]?.contentRect?.width ?? 0;
+      setChartWidth(nextWidth);
+    });
+
+    observer.observe(chartWrapperRef.current);
+    return () => observer.disconnect();
   }, []);
 
-  // ================= URGENCY CHECK =================
   const isUrgent = (date) => {
-    const now = new Date();
-    const followDate = new Date(date);
-    const diffHours = (followDate - now) / (1000 * 60 * 60);
+    const diffHours = (new Date(date) - new Date()) / (1000 * 60 * 60);
     return diffHours <= 24;
   };
 
-  // ================= STATUS CARDS =================
   const statusCards = [
     {
       title: "Total Applications",
       value: stats.total,
-      icon: <Briefcase className="text-indigo-600" size={22} />,
+      note: "All tracked opportunities",
+      icon: <Briefcase className="text-indigo-600" size={20} />,
     },
     {
       title: "Applied",
       value: stats.statusCounts.Applied,
-      icon: <FileText className="text-blue-600" size={22} />,
+      note: "Application confirmations",
+      icon: <FileText className="text-blue-600" size={20} />,
     },
     {
       title: "OA",
       value: stats.statusCounts.OA,
-      icon: <Clock className="text-purple-600" size={22} />,
+      note: "Assessments pending",
+      icon: <Clock className="text-emerald-600" size={20} />,
     },
     {
       title: "Interview",
       value: stats.statusCounts.Interview,
-      icon: <CheckCircle className="text-yellow-600" size={22} />,
+      note: "Interview pipeline",
+      icon: <CheckCircle className="text-amber-600" size={20} />,
     },
     {
       title: "Offer",
       value: stats.statusCounts.Offer,
-      icon: <Trophy className="text-green-600" size={22} />,
+      note: "Positive outcomes",
+      icon: <Trophy className="text-green-600" size={20} />,
     },
     {
       title: "Rejected",
       value: stats.statusCounts.Rejected,
-      icon: <XCircle className="text-red-600" size={22} />,
+      note: "Closed opportunities",
+      icon: <XCircle className="text-rose-600" size={20} />,
     },
   ];
 
-  // ================= CHART DATA =================
-  const chartData = [
-    { name: "Applied", value: stats.statusCounts.Applied },
-    { name: "OA", value: stats.statusCounts.OA },
-    { name: "Interview", value: stats.statusCounts.Interview },
-    { name: "Offer", value: stats.statusCounts.Offer },
-    { name: "Rejected", value: stats.statusCounts.Rejected },
-  ];
+  const chartData = useMemo(
+    () => [
+      { name: "Applied", value: stats.statusCounts.Applied },
+      { name: "OA", value: stats.statusCounts.OA },
+      { name: "Interview", value: stats.statusCounts.Interview },
+      { name: "Offer", value: stats.statusCounts.Offer },
+      { name: "Rejected", value: stats.statusCounts.Rejected },
+    ],
+    [stats.statusCounts]
+  );
 
-  const COLORS = ["#3b82f6", "#8b5cf6", "#facc15", "#22c55e", "#ef4444"];
-
-  // ================= UI =================
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-500 mt-1">
-            Analytics overview of your job applications.
-          </p>
-        </div>
+    <div className="space-y-8">
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-indigo-50 p-6 shadow-sm sm:p-8">
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-200/40 blur-3xl" />
+        <div className="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-sky-200/40 blur-2xl" />
 
-        <button
-          onClick={handleSimulateEmail}
-          disabled={importingEmail}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Mail size={16} />
-          {importingEmail ? "Importing Email..." : "Simulate Email Import"}
-        </button>
-      </div>
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white/80 px-3 py-1 text-xs font-semibold text-indigo-700">
+              <Sparkles size={14} />
+              JobTrack Workspace
+            </p>
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Welcome back. Here is your pipeline health.</h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">Stay focused on follow-ups and keep momentum with a clear view of every stage.</p>
+          </div>
+
+          <Link
+            to="/applications"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+          >
+            Manage Applications
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+      </section>
 
       {loading ? (
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="h-24 bg-gray-200 rounded-2xl animate-pulse"
-              />
-            ))}
-          </div>
-        ) : (
-        <>
-          {/* ================= Stats Cards ================= */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
-            {statusCards.map((item, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 sm:p-5
-           hover:shadow-xl hover:-translate-y-1
-           transition-all duration-300"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-500">{item.title}</p>
-                  {item.icon}
-                </div>
-                <h2 className="text-3xl font-bold text-gray-800 mt-3">
-                  {item.value}
-                </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {statusCards.map((item) => (
+            <article
+              key={item.title}
+              className="group rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-600">{item.title}</p>
+                <div className="rounded-lg border border-slate-100 bg-slate-50 p-2">{item.icon}</div>
               </div>
-            ))}
-          </div>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{item.value}</p>
+              <p className="mt-1 text-xs text-slate-500">{item.note}</p>
+            </article>
+          ))}
+        </div>
+      )}
 
-          {/* ================= Chart ================= */}
-          <div className="mt-6 w-full">
-            <div className="w-full h-[320px] min-h-[320px] bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-              {!chartReady ? (
-                <div className="h-full flex items-center justify-center">
-                  <p className="text-gray-400 text-sm">Preparing chart...</p>
-                </div>
-              ) : stats.total === 0 ? (
-                <div className="h-full flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                  <p className="text-gray-400">No data available for chart</p>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell key={index} fill={COLORS[index]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+        <div className="xl:col-span-3">
+          <div ref={chartWrapperRef} className="h-[340px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <div className="mb-3">
+              <h2 className="text-base font-semibold text-slate-900">Status Distribution</h2>
+              <p className="text-xs text-slate-500">Live breakdown of your application stages</p>
             </div>
-          </div>
 
-          {/* ================= FOLLOW UPS ================= */}
-          <div className="mt-8 bg-white rounded-2xl shadow-md border border-gray-100 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <CalendarClock className="text-indigo-600" size={22} />
-              <h2 className="text-lg font-semibold text-gray-800">
-                Upcoming Follow-Ups
-              </h2>
+            {stats.total === 0 ? (
+              <div className="flex h-[270px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-center">
+                <Briefcase size={28} className="text-slate-400" />
+                <p className="mt-3 text-sm font-medium text-slate-700">No chart data yet</p>
+                <p className="mt-1 text-xs text-slate-500">Add your first application to visualize progress.</p>
+              </div>
+            ) : chartWidth < 16 ? (
+              <div className="flex h-[270px] items-center justify-center text-sm text-slate-400">Preparing chart...</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={270}>
+                <PieChart>
+                  <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label>
+                    {chartData.map((entry, index) => (
+                      <Cell key={entry.name} fill={CHART_COLORS[index]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        <div className="xl:col-span-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <CalendarClock className="text-indigo-600" size={20} />
+              <h2 className="text-base font-semibold text-slate-900">Upcoming Follow-Ups</h2>
             </div>
 
             {loadingFollowUps ? (
-              <p className="text-sm text-gray-500">Loading follow-ups...</p>
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100" />
+                ))}
+              </div>
             ) : followUps.length === 0 ? (
-                <div className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-6 text-center">
-                  <p className="text-3xl mb-2">📭</p>
-                  <p className="text-sm font-medium text-gray-700">
-                    No upcoming follow-ups
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    You're all caught up — nothing urgent right now 🎉
-                  </p>
-                </div>
-              ) : (
-              <div className="flex flex-col gap-3">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                <p className="text-sm font-medium text-slate-700">No follow-ups due soon</p>
+                <p className="mt-1 text-xs text-slate-500">You are fully caught up for the next 24 hours.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
                 {followUps.map((app) => (
-                  <div
+                  <article
                     key={app._id}
-                    className={`p-4 rounded-xl border transition-all duration-200
-           hover:shadow-md ${
+                    className={`rounded-xl border p-4 transition ${
                       isUrgent(app.followUpDate)
-                        ? "border-red-300 bg-red-50"
-                        : "border-gray-200"
+                        ? "border-rose-200 bg-rose-50"
+                        : "border-slate-200 bg-white"
                     }`}
                   >
-                    <p className="font-medium text-gray-800">
-                      {app.companyName} — {app.role}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Follow-up:{" "}
-                      {new Date(app.followUpDate).toLocaleDateString()}
-                    </p>
-
-                    {isUrgent(app.followUpDate) && (
-                      <span className="text-xs font-semibold text-red-600">
-                        ⚠ Urgent (within 24h)
-                      </span>
-                    )}
-                  </div>
+                    <p className="text-sm font-semibold text-slate-900">{app.companyName}</p>
+                    <p className="text-xs text-slate-500">{app.role}</p>
+                    <p className="mt-2 text-xs text-slate-600">Follow-up: {new Date(app.followUpDate).toLocaleDateString()}</p>
+                  </article>
                 ))}
               </div>
             )}
           </div>
-        </>
-      )}
+        </div>
+      </section>
     </div>
   );
 };

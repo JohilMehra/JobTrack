@@ -1,4 +1,4 @@
-import { GoogleLogin } from "@react-oauth/google";
+﻿import { GoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../utils/api";
@@ -9,20 +9,22 @@ const GoogleLoginButton = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const handleSuccess = async (credentialResponse) => {
+  const handleSuccess = async ({ credential }) => {
+    if (!credential) {
+      toast.error("Google did not return a credential");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const res = await api.post("/auth/google", {
-        credential: credentialResponse.credential,
-      });
+      const res = await api.post("/auth/google", { credential });
 
       saveToken(res.data.token);
-      toast.success("Google login successful 🚀");
+      toast.success("Google login successful");
       navigate("/dashboard");
     } catch (error) {
-      console.error(error);
-      toast.error("Google login failed");
+      toast.error(error.response?.data?.message || "Google login failed");
     } finally {
       setLoading(false);
     }
@@ -34,26 +36,21 @@ const GoogleLoginButton = () => {
 
   return (
     <div className="w-full">
-      <div
-        className={`w-full transition ${
-          loading ? "opacity-60 pointer-events-none" : ""
-        }`}
-      >
+      <div className={`w-full transition ${loading ? "opacity-60 pointer-events-none" : ""}`}>
         <GoogleLogin
           onSuccess={handleSuccess}
           onError={handleError}
-          width={280}
+          useOneTap={false}
           theme="outline"
           size="large"
           shape="pill"
           text="continue_with"
+          width="280"
         />
       </div>
 
       {loading && (
-        <p className="text-xs text-center text-gray-400 mt-2">
-          Signing in with Google...
-        </p>
+        <p className="mt-2 text-center text-xs text-gray-500">Signing in with Google...</p>
       )}
     </div>
   );

@@ -1,97 +1,85 @@
+﻿import { Briefcase, Calendar, MapPin, Pencil, Trash2 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
-import { Pencil, Trash2, MapPin, Calendar } from "lucide-react";
 
 const getProgressConfig = (status) => {
   switch (status) {
     case "Applied":
-      return { width: "20%", color: "bg-gray-500", percent: 20 };
+      return { width: "20%", gradient: "from-slate-500 to-slate-400" };
     case "OA":
-      return { width: "40%", color: "bg-blue-600", percent: 40 };
+      return { width: "40%", gradient: "from-blue-500 to-indigo-500" };
     case "Interview":
-      return { width: "60%", color: "bg-purple-600", percent: 60 };
+      return { width: "65%", gradient: "from-amber-500 to-orange-500" };
     case "Offer":
-      return { width: "100%", color: "bg-emerald-500", percent: 100 };
+      return { width: "100%", gradient: "from-emerald-500 to-teal-500" };
     case "Rejected":
-      return { width: "100%", color: "bg-red-500", percent: 100 };
+      return { width: "100%", gradient: "from-rose-500 to-red-500" };
     default:
-      return { width: "0%", color: "bg-gray-300", percent: 0 };
+      return { width: "0%", gradient: "from-slate-300 to-slate-300" };
   }
 };
 
 const ApplicationCard = ({ application, onEdit, onDelete }) => {
-    const progress = getProgressConfig(application.status);
-  return (
-    <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-gray-800">
-            {application.companyName}
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">{application.role}</p>
-        </div>
+  const progress = getProgressConfig(application.status);
 
+  return (
+    <article className="group h-full rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-semibold tracking-tight text-slate-900">{application.companyName}</h2>
+          <p className="mt-1 text-sm text-slate-600">{application.role}</p>
+        </div>
         <StatusBadge status={application.status} />
       </div>
 
-      <div className="flex flex-col gap-2 mt-4 text-sm text-gray-600">
+      <div className="mt-4 space-y-2 text-sm text-slate-600">
         <p className="flex items-center gap-2">
-          <Calendar size={16} className="text-gray-500" />
-          Applied:{" "}
-          {application.appliedDate
-            ? new Date(application.appliedDate).toLocaleDateString()
-            : "N/A"}
+          <Calendar size={15} className="text-slate-400" />
+          Applied: {application.appliedDate ? new Date(application.appliedDate).toLocaleDateString() : "N/A"}
         </p>
 
         {application.location && (
           <p className="flex items-center gap-2">
-            <MapPin size={16} className="text-gray-500" />
-            {application.location}
+            <MapPin size={15} className="text-slate-400" />
+            <span className="truncate">{application.location}</span>
           </p>
         )}
 
         {application.notes && (
-          <p className="text-gray-500 mt-2 line-clamp-2">
-            📝 {application.notes}
-          </p>
+          <p className="line-clamp-2 rounded-lg bg-slate-50 p-2 text-xs text-slate-500">{application.notes}</p>
         )}
       </div>
 
-      <div className="flex gap-3 mt-5">
+      <div className="mt-5">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className={`h-full rounded-full bg-gradient-to-r ${progress.gradient} transition-all duration-700`}
+            style={{ width: progress.width }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-2">
         <button
           onClick={() => onEdit(application)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
         >
-          <Pencil size={16} />
+          <Pencil size={14} />
           Edit
         </button>
-
         <button
           onClick={() => onDelete(application._id)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100"
         >
-          <Trash2 size={16} />
+          <Trash2 size={14} />
           Delete
         </button>
       </div>
-      {/* Premium Progress Bar */}
-        <div className="mt-4">
-          <div className="w-full h-2 bg-gray-200/70 rounded-full overflow-hidden">
-            <div
-              className={`
-                h-full
-                ${progress.color}
-                rounded-full
-                transition-all duration-700 ease-out
-                relative
-              `}
-              style={{ width: progress.width }}
-            >
-              {/* subtle shine */}
-              <div className="absolute inset-0 bg-gradient-to-r from-white/30 to-transparent opacity-40" />
-            </div>
-          </div>
-        </div>
+
+      <div className="mt-4 inline-flex items-center gap-1 text-xs text-slate-400">
+        <Briefcase size={13} />
+        Pipeline item
       </div>
+    </article>
   );
 };
 
